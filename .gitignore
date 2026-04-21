@@ -1,0 +1,21 @@
+# Lingkungan & rahasia (jika nanti pakai file .env)
+.env
+.env.*
+!.env.example
+
+# Composer (jika ditambahkan)
+/vendor/
+
+# IDE / editor
+.idea/
+.vscode/
+*.swp
+*~
+
+# OS
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# Log / cache PHP (opsional)
+*.log
