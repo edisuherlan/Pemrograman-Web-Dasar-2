@@ -17,6 +17,7 @@ Repositori ini berisi **proyek praktikum** berupa aplikasi web berbasis **PHP** 
 - [Konfigurasi database](#konfigurasi-database)
 - [Menjalankan aplikasi](#menjalankan-aplikasi)
 - [Skema database](#skema-database)
+- [Desain ERD (diagram)](#desain-erd-diagram)
 - [Keamanan (catatan pembelajaran)](#keamanan-catatan-pembelajaran)
 - [Referensi](#referensi)
 
@@ -136,7 +137,17 @@ Database **`perkuliahan`** memiliki **5 tabel** yang saling berelasi:
 | `krs` | Mahasiswa mengambil MK per semester & tahun ajaran |
 | `nilai` | Nilai per baris KRS (relasi 1:1 dengan `krs`) |
 
-Untuk **diagram ERD** dalam format DBML, buka file **`database/perkuliahan.dbml`** dan tempel ke [dbdiagram.io](https://dbdiagram.io/).
+### Desain ERD (diagram)
+
+**ERD (Entity Relationship Diagram)** adalah gambaran visual **entitas** (tabel), **atribut** (kolom), dan **relasi** antar tabel (satu-ke-banyak, satu-ke-satu, dll.). Membaca ERD membantu memahami alur data sebelum membuat form dan query di aplikasi.
+
+**Link desain ERD database proyek ini (dbdiagram.io):**
+
+- **[ERD Perkuliahan — dbdiagram.io](https://dbdiagram.io/d/ERD-Perkuliahan-69e7f5411bbca0331205788c)**
+
+Di halaman tersebut Anda dapat melihat diagram interaktif: tabel **dosen**, **mahasiswa**, **matakuliah**, **krs**, dan **nilai** beserta garis relasi (foreign key) yang menghubungkannya. Diagram ini **mencerminkan skema** yang sama dengan file SQL `database/perkuliahan.sql` dan sumber teks DBML `database/perkuliahan.dbml`.
+
+**Cara lain (offline / edit):** buka file **`database/perkuliahan.dbml`** di editor, salin isinya, lalu tempel di [dbdiagram.io](https://dbdiagram.io/) jika ingin mengubah desain atau mengekspor gambar (PNG/PDF) dari sana.
 
 ---
 
@@ -152,7 +163,8 @@ Untuk **diagram ERD** dalam format DBML, buka file **`database/perkuliahan.dbml`
 
 - Repositori kursus / pengumpulan tugas: **[Pemrograman-Web-Dasar-2](https://github.com/edisuherlan/Pemrograman-Web-Dasar-2)**  
 - Bootstrap: [getbootstrap.com](https://getbootstrap.com/)  
-- Diagram database: [dbdiagram.io](https://dbdiagram.io/)
+- Desain ERD database (`perkuliahan`): [ERD Perkuliahan di dbdiagram.io](https://dbdiagram.io/d/ERD-Perkuliahan-69e7f5411bbca0331205788c)
+- Alat diagram database: [dbdiagram.io](https://dbdiagram.io/)
 
 ---
 
