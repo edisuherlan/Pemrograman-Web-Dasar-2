@@ -16,6 +16,7 @@ Repositori ini berisi **proyek praktikum** berupa aplikasi web berbasis **PHP** 
 - [Instalasi lokal (Laragon)](#instalasi-lokal-laragon)
 - [Konfigurasi database](#konfigurasi-database)
 - [Menjalankan aplikasi](#menjalankan-aplikasi)
+- [File pembelajaran (query tanpa vs dengan JOIN)](#file-pembelajaran-query-tanpa-vs-dengan-join)
 - [Skema database](#skema-database)
 - [Desain ERD (diagram)](#desain-erd-diagram)
 - [Keamanan (catatan pembelajaran)](#keamanan-catatan-pembelajaran)
@@ -28,11 +29,12 @@ Repositori ini berisi **proyek praktikum** berupa aplikasi web berbasis **PHP** 
 | Modul        | Deskripsi singkat |
 |-------------|-------------------|
 | **Beranda** | Pintasan ke semua modul + ringkasan alur pengisian data |
-| **Dosen**   | CRUD data dosen (NIDN, nama, email) |
-| **Mahasiswa** | CRUD data mahasiswa (NIM, nama, email, angkatan) |
-| **Mata kuliah** | CRUD mata kuliah; memilih **dosen pengampu** dari dropdown |
-| **KRS**     | CRUD pengambilan MK per mahasiswa, semester (gasal/genap), dan tahun ajaran |
-| **Nilai**   | CRUD nilai angka & huruf per **KRS** (satu KRS satu nilai); dropdown KRS menampilkan NIM, nama, MK, semester |
+| **Prodi** | CRUD program studi (kode & nama); master untuk dosen/mahasiswa/MK |
+| **Dosen**   | CRUD data dosen (NIDN, nama, email, **prodi**) |
+| **Mahasiswa** | CRUD data mahasiswa (NIM, nama, email, angkatan, **prodi**) |
+| **Mata kuliah** | CRUD mata kuliah; **prodi** MK + **dosen pengampu se-prodi** |
+| **KRS**     | CRUD pengambilan MK (**mhs & MK harus satu prodi**), semester, tahun ajaran |
+| **Nilai**   | CRUD nilai angka & huruf per **KRS**; tampilan menyertakan kode prodi |
 
 Setiap halaman modul dilengkapi **komentar kode berbahasa Indonesia** untuk membantu pemahaman mahasiswa pemula.
 
@@ -64,11 +66,13 @@ mk_web/
 │   ├── perkuliahan.sql     # Skema + data contoh (seeder)
 │   └── perkuliahan.dbml    # Diagram DBML untuk dbdiagram.io (opsional)
 ├── index.php               # Halaman beranda
+├── prodi.php               # CRUD program studi
 ├── dosen.php
 ├── mahasiswa.php
 ├── matakuliah.php
 ├── krs.php
 ├── nilai.php
+├── belajar_tampil_mahasiswa.php  # Contoh: tampil mahasiswa tanpa JOIN vs dengan JOIN (tanpa Bootstrap)
 └── README.md
 ```
 
@@ -119,22 +123,34 @@ File utama: **`config/database.php`**
    - `http://localhost/mk_web/`
    - atau virtual host Laragon jika Anda mengatur domain khusus
 
-3. Navigasi memakai **menu atas**: Beranda → Dosen / Mahasiswa / Mata kuliah / KRS / Nilai.
+3. Navigasi memakai **menu atas**: Beranda → Prodi / Dosen / Mahasiswa / Mata kuliah / KRS / Nilai.
 
-**Urutan pengisian data yang disarankan:** Dosen → Mahasiswa → Mata kuliah → KRS → Nilai (karena ada foreign key antar tabel).
+**Urutan pengisian data yang disarankan:** Prodi → Dosen → Mahasiswa → Mata kuliah → KRS → Nilai (foreign key antar tabel). Di **KRS**, mahasiswa hanya boleh mengambil MK dari **program studi yang sama** (dicek di aplikasi).
+
+---
+
+## File pembelajaran (query tanpa vs dengan JOIN)
+
+Halaman **`belajar_tampil_mahasiswa.php`** adalah contoh sengaja **tanpa Bootstrap/CSS** agar fokus ke alur PHP + SQL:
+
+1. **Tanpa JOIN** — `SELECT` hanya dari tabel `mahasiswa`. Kolom program studi yang tampil adalah **`id_prodi`** (angka foreign key), persis seperti tersimpan di database.
+2. **Dengan JOIN** — `mahasiswa` di-`INNER JOIN` ke `prodi` sehingga bisa menampilkan **kode dan nama** program studi yang mudah dibaca.
+
+Akses: `http://localhost/mk_web/belajar_tampil_mahasiswa.php` (sesuaikan path jika folder proyek berbeda).
 
 ---
 
 ## Skema database
 
-Database **`perkuliahan`** memiliki **5 tabel** yang saling berelasi:
+Database **`perkuliahan`** memiliki **6 tabel** yang saling berelasi:
 
 | Tabel | Peran singkat |
 |-------|----------------|
-| `dosen` | Data pengajar |
-| `mahasiswa` | Data mahasiswa |
-| `matakuliah` | Mata kuliah; relasi ke `dosen` (pengampu) |
-| `krs` | Mahasiswa mengambil MK per semester & tahun ajaran |
+| `prodi` | Program studi (master); dirujuk `dosen`, `mahasiswa`, `matakuliah` |
+| `dosen` | Data pengajar; bertugas pada satu `prodi` |
+| `mahasiswa` | Data mahasiswa; terdaftar pada satu `prodi` |
+| `matakuliah` | Mata kuliah milik satu `prodi`; satu dosen pengampu (dosen se-prodi) |
+| `krs` | Mahasiswa mengambil MK per semester & tahun ajaran (MK & mhs harus se-prodi) |
 | `nilai` | Nilai per baris KRS (relasi 1:1 dengan `krs`) |
 
 ### Desain ERD (diagram)
@@ -145,7 +161,7 @@ Database **`perkuliahan`** memiliki **5 tabel** yang saling berelasi:
 
 - **[ERD Perkuliahan — dbdiagram.io](https://dbdiagram.io/d/ERD-Perkuliahan-69e7f5411bbca0331205788c)**
 
-Di halaman tersebut Anda dapat melihat diagram interaktif: tabel **dosen**, **mahasiswa**, **matakuliah**, **krs**, dan **nilai** beserta garis relasi (foreign key) yang menghubungkannya. Diagram ini **mencerminkan skema** yang sama dengan file SQL `database/perkuliahan.sql` dan sumber teks DBML `database/perkuliahan.dbml`.
+Di halaman tersebut Anda dapat melihat diagram interaktif (perbarui impor DBML jika skema berubah). Skema terkini ada di **`database/perkuliahan.sql`** dan **`database/perkuliahan.dbml`** (termasuk tabel **`prodi`**).
 
 **Cara lain (offline / edit):** buka file **`database/perkuliahan.dbml`** di editor, salin isinya, lalu tempel di [dbdiagram.io](https://dbdiagram.io/) jika ingin mengubah desain atau mengekspor gambar (PNG/PDF) dari sana.
 

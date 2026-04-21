@@ -17,7 +17,7 @@
  *   hasil studi per KRS.
  *
  * Alur belajar yang disarankan:
- * 1) Mulai dari data master sederhana: Dosen, Mahasiswa.
+ * 1) Mulai dari data master: Program studi (prodi), lalu Dosen & Mahasiswa.
  * 2) Lanjut Mata kuliah (perlu memilih dosen pengampu).
  * 3) KRS (memilih mahasiswa + mata kuliah + semester/tahun ajaran).
  * 4) Nilai (mengisi nilai untuk sebuah KRS yang sudah ada).
@@ -80,6 +80,7 @@ require_once __DIR__ . '/includes/header.php';
     <?php
     // Array $kartu: setiap elemen = [file tujuan, nama ikon Bootstrap Icons, judul kartu, deskripsi singkat]
     $kartu = [
+        ['prodi.php', 'bi-building', 'Program studi', 'Kode & nama prodi. Wajib diisi sebelum dosen/mahasiswa/MK.'],
         ['dosen.php', 'bi-person-badge', 'Dosen', 'Data pengajar & NIDN. Dipakai sebagai pengampu mata kuliah.'],
         ['mahasiswa.php', 'bi-people', 'Mahasiswa', 'Data mahasiswa & NIM. Dipakai saat mengisi KRS.'],
         ['matakuliah.php', 'bi-book', 'Mata kuliah', 'Kode MK, SKS, dan dosen pengampu.'],

@@ -62,6 +62,7 @@ $basename = basename((string) ($_SERVER['SCRIPT_NAME'] ?? ''));
             <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
                 <!-- Setiap item: class active jika file PHP sama dengan nama file sekarang -->
                 <li class="nav-item"><a class="nav-link <?= $basename === 'index.php' ? 'active' : '' ?>" href="index.php">Beranda</a></li>
+                <li class="nav-item"><a class="nav-link <?= $basename === 'prodi.php' ? 'active' : '' ?>" href="prodi.php">Prodi</a></li>
                 <li class="nav-item"><a class="nav-link <?= $basename === 'dosen.php' ? 'active' : '' ?>" href="dosen.php">Dosen</a></li>
                 <li class="nav-item"><a class="nav-link <?= $basename === 'mahasiswa.php' ? 'active' : '' ?>" href="mahasiswa.php">Mahasiswa</a></li>
                 <li class="nav-item"><a class="nav-link <?= $basename === 'matakuliah.php' ? 'active' : '' ?>" href="matakuliah.php">Mata kuliah</a></li>

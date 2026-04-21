@@ -1,5 +1,5 @@
 -- Database: perkuliahan
--- Praktikum Pemrograman Web 2 — skema akademik sederhana (5 tabel + relasi)
+-- Praktikum Pemrograman Web 2 — skema akademik (6 tabel: prodi + 5 tabel lain berelasi)
 -- Impor via phpMyAdmin / mysql CLI: mysql -u root < database/perkuliahan.sql
 
 SET NAMES utf8mb4;
@@ -12,46 +12,71 @@ CREATE DATABASE perkuliahan
 
 USE perkuliahan;
 
--- 1. Dosen (pengampu mata kuliah)
+-- 0. Program studi (master: dosen, mahasiswa, dan mata kuliah merujuk ke prodi)
+CREATE TABLE prodi (
+  id_prodi INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  kode_prodi VARCHAR(20) NOT NULL,
+  nama_prodi VARCHAR(160) NOT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id_prodi),
+  UNIQUE KEY uq_prodi_kode (kode_prodi)
+) ENGINE=InnoDB;
+
+-- 1. Dosen (bertugas pada satu program studi; pengampu mata kuliah)
 CREATE TABLE dosen (
   id_dosen INT UNSIGNED NOT NULL AUTO_INCREMENT,
   nidn VARCHAR(20) NOT NULL,
   nama VARCHAR(120) NOT NULL,
   email VARCHAR(120) DEFAULT NULL,
+  id_prodi INT UNSIGNED NOT NULL,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (id_dosen),
-  UNIQUE KEY uq_dosen_nidn (nidn)
+  UNIQUE KEY uq_dosen_nidn (nidn),
+  KEY idx_dosen_prodi (id_prodi),
+  CONSTRAINT fk_dosen_prodi
+    FOREIGN KEY (id_prodi) REFERENCES prodi (id_prodi)
+    ON UPDATE CASCADE ON DELETE RESTRICT
 ) ENGINE=InnoDB;
 
--- 2. Mahasiswa
+-- 2. Mahasiswa (terdaftar pada satu program studi)
 CREATE TABLE mahasiswa (
   id_mahasiswa INT UNSIGNED NOT NULL AUTO_INCREMENT,
   nim VARCHAR(20) NOT NULL,
   nama VARCHAR(120) NOT NULL,
   email VARCHAR(120) DEFAULT NULL,
   angkatan YEAR NOT NULL,
+  id_prodi INT UNSIGNED NOT NULL,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (id_mahasiswa),
-  UNIQUE KEY uq_mahasiswa_nim (nim)
+  UNIQUE KEY uq_mahasiswa_nim (nim),
+  KEY idx_mahasiswa_prodi (id_prodi),
+  CONSTRAINT fk_mahasiswa_prodi
+    FOREIGN KEY (id_prodi) REFERENCES prodi (id_prodi)
+    ON UPDATE CASCADE ON DELETE RESTRICT
 ) ENGINE=InnoDB;
 
--- 3. Mata kuliah (wajib punya satu dosen pengampu)
+-- 3. Mata kuliah (milik satu prodi; satu dosen pengampu dari prodi yang sama — dicek di aplikasi)
 CREATE TABLE matakuliah (
   id_mk INT UNSIGNED NOT NULL AUTO_INCREMENT,
   kode_mk VARCHAR(20) NOT NULL,
   nama_mk VARCHAR(160) NOT NULL,
   sks TINYINT UNSIGNED NOT NULL DEFAULT 3,
   id_dosen INT UNSIGNED NOT NULL,
+  id_prodi INT UNSIGNED NOT NULL,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (id_mk),
   UNIQUE KEY uq_matakuliah_kode (kode_mk),
   KEY idx_matakuliah_dosen (id_dosen),
+  KEY idx_matakuliah_prodi (id_prodi),
   CONSTRAINT fk_matakuliah_dosen
     FOREIGN KEY (id_dosen) REFERENCES dosen (id_dosen)
+    ON UPDATE CASCADE ON DELETE RESTRICT,
+  CONSTRAINT fk_matakuliah_prodi
+    FOREIGN KEY (id_prodi) REFERENCES prodi (id_prodi)
     ON UPDATE CASCADE ON DELETE RESTRICT
 ) ENGINE=InnoDB;
 
--- 4. KRS — hubungan mahasiswa mengambil mata kuliah per semester/tahun ajaran
+-- 4. KRS — mahasiswa mengambil MK (harus se-prodi: divalidasi di aplikasi)
 CREATE TABLE krs (
   id_krs INT UNSIGNED NOT NULL AUTO_INCREMENT,
   id_mahasiswa INT UNSIGNED NOT NULL,
@@ -71,7 +96,7 @@ CREATE TABLE krs (
     ON UPDATE CASCADE ON DELETE RESTRICT
 ) ENGINE=InnoDB;
 
--- 5. Nilai — satu baris per KRS (1:1 dengan krs)
+-- 5. Nilai — satu baris per KRS (1:1)
 CREATE TABLE nilai (
   id_nilai INT UNSIGNED NOT NULL AUTO_INCREMENT,
   id_krs INT UNSIGNED NOT NULL,
@@ -87,50 +112,53 @@ CREATE TABLE nilai (
 
 SET FOREIGN_KEY_CHECKS = 1;
 
--- Seeder dummy (25 mahasiswa + 25 KRS + 25 nilai; dosen & MK diperluas untuk relasi)
-INSERT INTO dosen (nidn, nama, email) VALUES
-  ('0012345678', 'Edi Suherlan', 'edi.suherlan@kampus.ac.id'),
-  ('0012345679', 'Budi Santoso', 'budi.santoso@kampus.ac.id'),
-  ('0012345680', 'Citra Lestari', 'citra.lestari@kampus.ac.id'),
-  ('0012345681', 'Dodi Firmansyah', 'dodi.firmansyah@kampus.ac.id'),
-  ('0012345682', 'Eka Putri Wulandari', 'eka.putri@kampus.ac.id');
+-- Seeder
+INSERT INTO prodi (kode_prodi, nama_prodi) VALUES
+  ('TI', 'Teknik Informatika'),
+  ('SI', 'Sistem Informasi');
 
-INSERT INTO matakuliah (kode_mk, nama_mk, sks, id_dosen) VALUES
-  ('PW2', 'Pemrograman Web 2', 3, 1),
-  ('BD', 'Basis Data', 4, 2),
-  ('PBO', 'Pemrograman Berorientasi Objek', 3, 1),
-  ('SO', 'Sistem Operasi', 3, 3),
-  ('JARKOM', 'Jaringan Komputer', 3, 4),
-  ('PAD', 'Pengantar Analisis Data', 3, 5);
+INSERT INTO dosen (nidn, nama, email, id_prodi) VALUES
+  ('0012345678', 'Edi Suherlan', 'edi.suherlan@kampus.ac.id', 1),
+  ('0012345679', 'Budi Santoso', 'budi.santoso@kampus.ac.id', 1),
+  ('0012345680', 'Citra Lestari', 'citra.lestari@kampus.ac.id', 1),
+  ('0012345681', 'Dodi Firmansyah', 'dodi.firmansyah@kampus.ac.id', 2),
+  ('0012345682', 'Eka Putri Wulandari', 'eka.putri@kampus.ac.id', 2);
 
-INSERT INTO mahasiswa (nim, nama, email, angkatan) VALUES
-  ('2024001', 'Andi Pratama', 'm2024001@student.ac.id', 2024),
-  ('2024002', 'Siti Rahma', 'm2024002@student.ac.id', 2024),
-  ('2024003', 'Bima Saskara', 'm2024003@student.ac.id', 2024),
-  ('2024004', 'Dewi Lestari', 'm2024004@student.ac.id', 2024),
-  ('2024005', 'Eko Wijaya', 'm2024005@student.ac.id', 2024),
-  ('2024006', 'Fitri Handayani', 'm2024006@student.ac.id', 2024),
-  ('2024007', 'Gilang Ramadhan', 'm2024007@student.ac.id', 2024),
-  ('2024008', 'Hani Kartika', 'm2024008@student.ac.id', 2024),
-  ('2024009', 'Indra Kusuma', 'm2024009@student.ac.id', 2024),
-  ('2024010', 'Jihan Safitri', 'm2024010@student.ac.id', 2024),
-  ('2024011', 'Kurniawan Adi', 'm2024011@student.ac.id', 2024),
-  ('2024012', 'Lia Permatasari', 'm2024012@student.ac.id', 2024),
-  ('2024013', 'Miko Pratama', 'm2024013@student.ac.id', 2024),
-  ('2024014', 'Nadia Salsabila', 'm2024014@student.ac.id', 2024),
-  ('2024015', 'Omar Fauzi', 'm2024015@student.ac.id', 2024),
-  ('2024016', 'Putri Amelia', 'm2024016@student.ac.id', 2024),
-  ('2024017', 'Qori Sandria', 'm2024017@student.ac.id', 2024),
-  ('2024018', 'Raka Mahendra', 'm2024018@student.ac.id', 2024),
-  ('2024019', 'Salsa Nabila', 'm2024019@student.ac.id', 2024),
-  ('2024020', 'Taufik Hidayat', 'm2024020@student.ac.id', 2024),
-  ('2024021', 'Umi Kalsum', 'm2024021@student.ac.id', 2024),
-  ('2024022', 'Vino Bastian', 'm2024022@student.ac.id', 2024),
-  ('2024023', 'Winda Ayu', 'm2024023@student.ac.id', 2024),
-  ('2024024', 'Yoga Pratama', 'm2024024@student.ac.id', 2024),
-  ('2024025', 'Zahra Maulida', 'm2024025@student.ac.id', 2024);
+INSERT INTO matakuliah (kode_mk, nama_mk, sks, id_dosen, id_prodi) VALUES
+  ('PW2', 'Pemrograman Web 2', 3, 1, 1),
+  ('BD', 'Basis Data', 4, 2, 1),
+  ('PBO', 'Pemrograman Berorientasi Objek', 3, 1, 1),
+  ('SO', 'Sistem Operasi', 3, 3, 1),
+  ('JARKOM', 'Jaringan Komputer', 3, 4, 2),
+  ('PAD', 'Pengantar Analisis Data', 3, 5, 2);
 
--- 25 KRS: mahasiswa id 1–25 mengambil Pemrograman Web 2, semester gasal 2025/2026
+INSERT INTO mahasiswa (nim, nama, email, angkatan, id_prodi) VALUES
+  ('2024001', 'Andi Pratama', 'm2024001@student.ac.id', 2024, 1),
+  ('2024002', 'Siti Rahma', 'm2024002@student.ac.id', 2024, 1),
+  ('2024003', 'Bima Saskara', 'm2024003@student.ac.id', 2024, 1),
+  ('2024004', 'Dewi Lestari', 'm2024004@student.ac.id', 2024, 1),
+  ('2024005', 'Eko Wijaya', 'm2024005@student.ac.id', 2024, 1),
+  ('2024006', 'Fitri Handayani', 'm2024006@student.ac.id', 2024, 1),
+  ('2024007', 'Gilang Ramadhan', 'm2024007@student.ac.id', 2024, 1),
+  ('2024008', 'Hani Kartika', 'm2024008@student.ac.id', 2024, 1),
+  ('2024009', 'Indra Kusuma', 'm2024009@student.ac.id', 2024, 1),
+  ('2024010', 'Jihan Safitri', 'm2024010@student.ac.id', 2024, 1),
+  ('2024011', 'Kurniawan Adi', 'm2024011@student.ac.id', 2024, 1),
+  ('2024012', 'Lia Permatasari', 'm2024012@student.ac.id', 2024, 1),
+  ('2024013', 'Miko Pratama', 'm2024013@student.ac.id', 2024, 1),
+  ('2024014', 'Nadia Salsabila', 'm2024014@student.ac.id', 2024, 1),
+  ('2024015', 'Omar Fauzi', 'm2024015@student.ac.id', 2024, 1),
+  ('2024016', 'Putri Amelia', 'm2024016@student.ac.id', 2024, 1),
+  ('2024017', 'Qori Sandria', 'm2024017@student.ac.id', 2024, 1),
+  ('2024018', 'Raka Mahendra', 'm2024018@student.ac.id', 2024, 1),
+  ('2024019', 'Salsa Nabila', 'm2024019@student.ac.id', 2024, 1),
+  ('2024020', 'Taufik Hidayat', 'm2024020@student.ac.id', 2024, 1),
+  ('2024021', 'Umi Kalsum', 'm2024021@student.ac.id', 2024, 1),
+  ('2024022', 'Vino Bastian', 'm2024022@student.ac.id', 2024, 1),
+  ('2024023', 'Winda Ayu', 'm2024023@student.ac.id', 2024, 1),
+  ('2024024', 'Yoga Pratama', 'm2024024@student.ac.id', 2024, 1),
+  ('2024025', 'Zahra Maulida', 'm2024025@student.ac.id', 2024, 1);
+
 INSERT INTO krs (id_mahasiswa, id_mk, semester, tahun_ajaran) VALUES
   (1, 1, 'gasal', '2025/2026'),
   (2, 1, 'gasal', '2025/2026'),
@@ -158,7 +186,6 @@ INSERT INTO krs (id_mahasiswa, id_mk, semester, tahun_ajaran) VALUES
   (24, 1, 'gasal', '2025/2026'),
   (25, 1, 'gasal', '2025/2026');
 
--- Nilai huruf: A >= 85, B 75–84, C 65–74, D 55–64, E < 55 (skala umum di Indonesia)
 INSERT INTO nilai (id_krs, nilai_angka, nilai_huruf) VALUES
   (1, 88.00, 'A'),
   (2, 82.50, 'B'),

@@ -4,9 +4,17 @@
 Project perkuliahan {
   database_type: 'MySQL'
   Note: '''
-    Praktikum Pemrograman Web 2 — ERD akademik (5 tabel).
+    Praktikum Pemrograman Web 2 — ERD akademik (6 tabel).
     Impor SQL: database/perkuliahan.sql
   '''
+}
+
+Table prodi {
+  id_prodi int [pk, increment, note: 'UNSIGNED']
+  kode_prodi varchar(20) [not null, unique]
+  nama_prodi varchar(160) [not null]
+  created_at timestamp [not null, default: `CURRENT_TIMESTAMP`]
+  Note: 'Program studi'
 }
 
 Table dosen {
@@ -14,8 +22,12 @@ Table dosen {
   nidn varchar(20) [not null, unique]
   nama varchar(120) [not null]
   email varchar(120)
+  id_prodi int [not null]
   created_at timestamp [not null, default: `CURRENT_TIMESTAMP`]
-  Note: 'Dosen pengampu mata kuliah'
+  indexes {
+    id_prodi
+  }
+  Note: 'Dosen; bertugas pada satu prodi'
 }
 
 Table mahasiswa {
@@ -23,9 +35,13 @@ Table mahasiswa {
   nim varchar(20) [not null, unique]
   nama varchar(120) [not null]
   email varchar(120)
-  angkatan int [not null, note: 'Kolom MySQL YEAR']
+  angkatan int [not null, note: 'MySQL YEAR']
+  id_prodi int [not null]
   created_at timestamp [not null, default: `CURRENT_TIMESTAMP`]
-  Note: 'Data mahasiswa'
+  indexes {
+    id_prodi
+  }
+  Note: 'Mahasiswa; terdaftar pada satu prodi'
 }
 
 Table matakuliah {
@@ -34,18 +50,20 @@ Table matakuliah {
   nama_mk varchar(160) [not null]
   sks tinyint [not null, default: 3, note: 'UNSIGNED']
   id_dosen int [not null]
+  id_prodi int [not null]
   created_at timestamp [not null, default: `CURRENT_TIMESTAMP`]
   indexes {
     id_dosen
+    id_prodi
   }
-  Note: 'Mata kuliah; wajib satu dosen pengampu'
+  Note: 'Mata kuliah milik satu prodi; satu dosen pengampu'
 }
 
 Table krs {
   id_krs int [pk, increment, note: 'UNSIGNED']
   id_mahasiswa int [not null]
   id_mk int [not null]
-  semester varchar(10) [not null, note: "MySQL ENUM: 'gasal','genap'"]
+  semester varchar(10) [not null, note: "ENUM MySQL: 'gasal','genap'"]
   tahun_ajaran varchar(9) [not null, note: 'Format YYYY/YYYY']
   created_at timestamp [not null, default: `CURRENT_TIMESTAMP`]
   indexes {
@@ -53,7 +71,7 @@ Table krs {
     id_mahasiswa
     id_mk
   }
-  Note: 'KRS: ambil MK per semester & tahun ajaran'
+  Note: 'KRS: ambil MK (se-prodi divalidasi di aplikasi)'
 }
 
 Table nilai {
@@ -61,16 +79,20 @@ Table nilai {
   id_krs int [not null, unique]
   nilai_angka decimal(5,2) [not null]
   nilai_huruf char(2) [not null]
-  updated_at timestamp [not null, default: `CURRENT_TIMESTAMP`, note: 'MySQL: ON UPDATE CURRENT_TIMESTAMP']
+  updated_at timestamp [not null, default: `CURRENT_TIMESTAMP`, note: 'MySQL ON UPDATE']
   Note: 'Satu baris nilai per KRS (1:1)'
 }
 
-// Relasi: anak > induk (many-to-one), atau "-" untuk one-to-one
+Ref: dosen.id_prodi > prodi.id_prodi [delete: restrict, update: cascade]
+
+Ref: mahasiswa.id_prodi > prodi.id_prodi [delete: restrict, update: cascade]
+
 Ref: matakuliah.id_dosen > dosen.id_dosen [delete: restrict, update: cascade]
+
+Ref: matakuliah.id_prodi > prodi.id_prodi [delete: restrict, update: cascade]
 
 Ref: krs.id_mahasiswa > mahasiswa.id_mahasiswa [delete: cascade, update: cascade]
 
 Ref: krs.id_mk > matakuliah.id_mk [delete: restrict, update: cascade]
 
-// 1:1 — kolom kedua (id_krs di nilai) adalah FK
 Ref: krs.id_krs - nilai.id_krs [delete: cascade, update: cascade]

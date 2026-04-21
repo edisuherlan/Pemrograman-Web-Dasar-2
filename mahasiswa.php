@@ -35,16 +35,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $email = trim((string) ($_POST['email'] ?? ''));
             // (int) mengubah string angka dari form menjadi integer (tahun angkatan)
             $angkatan = (int) ($_POST['angkatan'] ?? 0);
+            $idProdi = (int) ($_POST['id_prodi'] ?? 0);
 
             // Batas angkatan 2000–2100: sesuaikan rentang jika aturan kampus beda
-            if ($nim === '' || $nama === '' || $angkatan < 2000 || $angkatan > 2100) {
-                header('Location: mahasiswa.php?status=tidak_valid&msg=' . rawurlencode('NIM, nama, dan angkatan (2000–2100) wajib valid.'));
+            if ($nim === '' || $nama === '' || $angkatan < 2000 || $angkatan > 2100 || $idProdi < 1) {
+                header('Location: mahasiswa.php?status=tidak_valid&msg=' . rawurlencode('NIM, nama, angkatan (2000–2100), dan prodi wajib valid.'));
                 exit;
             }
 
-            // Empat placeholder ? untuk empat kolom
-            $stmt = $pdo->prepare('INSERT INTO mahasiswa (nim, nama, email, angkatan) VALUES (?, ?, ?, ?)');
-            $stmt->execute([$nim, $nama, $email !== '' ? $email : null, $angkatan]);
+            $stmt = $pdo->prepare('INSERT INTO mahasiswa (nim, nama, email, angkatan, id_prodi) VALUES (?, ?, ?, ?, ?)');
+            $stmt->execute([$nim, $nama, $email !== '' ? $email : null, $angkatan, $idProdi]);
             header('Location: mahasiswa.php?status=simpan_ok');
             exit;
         }
@@ -56,14 +56,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $nama = trim((string) ($_POST['nama'] ?? ''));
             $email = trim((string) ($_POST['email'] ?? ''));
             $angkatan = (int) ($_POST['angkatan'] ?? 0);
+            $idProdi = (int) ($_POST['id_prodi'] ?? 0);
 
-            if ($id < 1 || $nim === '' || $nama === '' || $angkatan < 2000 || $angkatan > 2100) {
+            if ($id < 1 || $nim === '' || $nama === '' || $angkatan < 2000 || $angkatan > 2100 || $idProdi < 1) {
                 header('Location: mahasiswa.php?status=tidak_valid&msg=' . rawurlencode('Data tidak lengkap.'));
                 exit;
             }
 
-            $stmt = $pdo->prepare('UPDATE mahasiswa SET nim = ?, nama = ?, email = ?, angkatan = ? WHERE id_mahasiswa = ?');
-            $stmt->execute([$nim, $nama, $email !== '' ? $email : null, $angkatan, $id]);
+            $stmt = $pdo->prepare('UPDATE mahasiswa SET nim = ?, nama = ?, email = ?, angkatan = ?, id_prodi = ? WHERE id_mahasiswa = ?');
+            $stmt->execute([$nim, $nama, $email !== '' ? $email : null, $angkatan, $idProdi, $id]);
             header('Location: mahasiswa.php?status=simpan_ok');
             exit;
         }
@@ -106,8 +107,15 @@ if ($aksiGet === 'ubah' && $idEdit > 0) {
     }
 }
 
-// Ambil semua mahasiswa; urut NIM agar mudah dicari
-$daftar = $pdo->query('SELECT * FROM mahasiswa ORDER BY nim ASC')->fetchAll(PDO::FETCH_ASSOC);
+$prodiPilihan = $pdo->query('SELECT id_prodi, kode_prodi, nama_prodi FROM prodi ORDER BY kode_prodi ASC')->fetchAll(PDO::FETCH_ASSOC);
+
+// Mahasiswa beserta nama prodi
+$daftar = $pdo->query(
+    'SELECT m.*, p.kode_prodi, p.nama_prodi
+     FROM mahasiswa m
+     INNER JOIN prodi p ON p.id_prodi = m.id_prodi
+     ORDER BY m.nim ASC'
+)->fetchAll(PDO::FETCH_ASSOC);
 
 $judulHalaman = 'Data Mahasiswa';
 require_once __DIR__ . '/includes/header.php';
@@ -115,7 +123,7 @@ require_once __DIR__ . '/includes/header.php';
 
 <?php if ($aksiGet === 'tambah' || ($aksiGet === 'ubah' && $barisEdit)) : ?>
     <div class="alert alert-info small" role="note">
-        <strong>Petunjuk:</strong> NIM harus unik. Angkatan diisi tahun empat digit (contoh: 2024). Email boleh dikosongkan.
+        <strong>Petunjuk:</strong> NIM harus unik. Pilih program studi. Angkatan diisi tahun empat digit (contoh: 2024). Email boleh dikosongkan.
     </div>
     <div class="card shadow-sm border-0">
         <div class="card-body">
@@ -135,6 +143,16 @@ require_once __DIR__ . '/includes/header.php';
                     <input class="form-control" id="nama" name="nama" required maxlength="120"
                            value="<?= $barisEdit ? h((string) $barisEdit['nama']) : '' ?>">
                 </div>
+                <div class="col-12">
+                    <label class="form-label" for="id_prodi">Program studi</label>
+                    <select class="form-select" id="id_prodi" name="id_prodi" required <?= $prodiPilihan === [] ? 'disabled' : '' ?>>
+                        <option value="">— pilih prodi —</option>
+                        <?php foreach ($prodiPilihan as $p) : ?>
+                            <?php $sel = $barisEdit && (int) $barisEdit['id_prodi'] === (int) $p['id_prodi'] ? ' selected' : ''; ?>
+                            <option value="<?= (int) $p['id_prodi'] ?>"<?= $sel ?>><?= h((string) $p['kode_prodi']) ?> — <?= h((string) $p['nama_prodi']) ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
                 <div class="col-md-6">
                     <label class="form-label" for="email">Email (opsional)</label>
                     <input class="form-control" id="email" name="email" type="email" maxlength="120"
@@ -147,7 +165,7 @@ require_once __DIR__ . '/includes/header.php';
                            value="<?= $barisEdit ? (int) $barisEdit['angkatan'] : 2024 ?>">
                 </div>
                 <div class="col-12 d-flex gap-2">
-                    <button type="submit" class="btn btn-primary">Simpan</button>
+                    <button type="submit" class="btn btn-primary" <?= $prodiPilihan === [] ? 'disabled' : '' ?>>Simpan</button>
                     <a class="btn btn-outline-secondary" href="mahasiswa.php">Batal</a>
                 </div>
             </form>
@@ -166,6 +184,7 @@ require_once __DIR__ . '/includes/header.php';
                 <th scope="col">#</th>
                 <th scope="col">NIM</th>
                 <th scope="col">Nama</th>
+                <th scope="col">Prodi</th>
                 <th scope="col">Email</th>
                 <th scope="col">Angkatan</th>
                 <th scope="col" style="width: 9rem">Aksi</th>
@@ -173,13 +192,14 @@ require_once __DIR__ . '/includes/header.php';
             </thead>
             <tbody>
             <?php if ($daftar === []) : ?>
-                <tr><td colspan="6" class="text-center text-muted py-4">Belum ada data mahasiswa.</td></tr>
+                <tr><td colspan="7" class="text-center text-muted py-4">Belum ada data mahasiswa.</td></tr>
             <?php else : ?>
                 <?php foreach ($daftar as $i => $r) : ?>
                     <tr>
                         <td><?= $i + 1 ?></td>
                         <td><?= h((string) $r['nim']) ?></td>
                         <td><?= h((string) $r['nama']) ?></td>
+                        <td><?= h((string) $r['kode_prodi']) ?> — <?= h((string) $r['nama_prodi']) ?></td>
                         <td><?= h((string) ($r['email'] ?? '')) ?></td>
                         <td><?= (int) $r['angkatan'] ?></td>
                         <td class="d-flex flex-wrap gap-1">

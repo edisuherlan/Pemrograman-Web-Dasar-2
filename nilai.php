@@ -100,11 +100,12 @@ $barisEdit = null;
 if ($aksiGet === 'ubah' && $idEdit > 0) {
     // JOIN banyak tabel agar form ubah bisa menampilkan teks NIM & nama MK (bukan cuma id)
     $stmt = $pdo->prepare(
-        'SELECT n.*, k.id_mahasiswa, k.id_mk, k.semester, k.tahun_ajaran, m.nim, m.nama AS nama_mhs, mk.kode_mk, mk.nama_mk
+        'SELECT n.*, k.id_mahasiswa, k.id_mk, k.semester, k.tahun_ajaran, m.nim, m.nama AS nama_mhs, mk.kode_mk, mk.nama_mk, p.kode_prodi
          FROM nilai n
          INNER JOIN krs k ON k.id_krs = n.id_krs
          INNER JOIN mahasiswa m ON m.id_mahasiswa = k.id_mahasiswa
          INNER JOIN matakuliah mk ON mk.id_mk = k.id_mk
+         INNER JOIN prodi p ON p.id_prodi = m.id_prodi
          WHERE n.id_nilai = ?'
     );
     $stmt->execute([$idEdit]);
@@ -116,10 +117,11 @@ if ($aksiGet === 'ubah' && $idEdit > 0) {
 
 // Query KRS yang belum punya baris di tabel nilai (LEFT JOIN ... WHERE n.id_nilai IS NULL)
 $krsKosong = $pdo->query(
-    'SELECT k.id_krs, m.nim, m.nama AS nama_mhs, mk.kode_mk, mk.nama_mk, k.semester, k.tahun_ajaran
+    'SELECT k.id_krs, m.nim, m.nama AS nama_mhs, mk.kode_mk, mk.nama_mk, k.semester, k.tahun_ajaran, p.kode_prodi
      FROM krs k
      INNER JOIN mahasiswa m ON m.id_mahasiswa = k.id_mahasiswa
      INNER JOIN matakuliah mk ON mk.id_mk = k.id_mk
+     INNER JOIN prodi p ON p.id_prodi = m.id_prodi
      LEFT JOIN nilai n ON n.id_krs = k.id_krs
      WHERE n.id_nilai IS NULL
      ORDER BY k.tahun_ajaran DESC, m.nim'
@@ -127,11 +129,12 @@ $krsKosong = $pdo->query(
 
 // Semua nilai untuk tabel daftar (dengan JOIN untuk tampilan lengkap)
 $daftar = $pdo->query(
-    'SELECT n.*, k.semester, k.tahun_ajaran, m.nim, m.nama AS nama_mhs, mk.kode_mk, mk.nama_mk
+    'SELECT n.*, k.semester, k.tahun_ajaran, m.nim, m.nama AS nama_mhs, mk.kode_mk, mk.nama_mk, p.kode_prodi
      FROM nilai n
      INNER JOIN krs k ON k.id_krs = n.id_krs
      INNER JOIN mahasiswa m ON m.id_mahasiswa = k.id_mahasiswa
      INNER JOIN matakuliah mk ON mk.id_mk = k.id_mk
+     INNER JOIN prodi p ON p.id_prodi = m.id_prodi
      ORDER BY k.tahun_ajaran DESC, m.nim'
 )->fetchAll(PDO::FETCH_ASSOC);
 
@@ -162,6 +165,7 @@ require_once __DIR__ . '/includes/header.php';
                             <option value="">— pilih KRS —</option>
                             <?php foreach ($krsKosong as $row) : ?>
                                 <option value="<?= (int) $row['id_krs'] ?>">
+                                    [<?= h((string) $row['kode_prodi']) ?>]
                                     <?= h((string) $row['nim']) ?> — <?= h((string) $row['nama_mhs']) ?>
                                     | <?= h((string) $row['kode_mk']) ?> — <?= h((string) $row['nama_mk']) ?>
                                     | <?= h((string) $row['semester']) ?> <?= h((string) $row['tahun_ajaran']) ?>
@@ -206,6 +210,7 @@ require_once __DIR__ . '/includes/header.php';
                 <div class="col-12">
                     <p class="form-control-plaintext border rounded px-2 bg-white small mb-0">
                         <strong>KRS:</strong>
+                        [<?= h((string) $barisEdit['kode_prodi']) ?>]
                         <?= h((string) $barisEdit['nim']) ?> — <?= h((string) $barisEdit['nama_mhs']) ?> |
                         <?= h((string) $barisEdit['kode_mk']) ?> — <?= h((string) $barisEdit['nama_mk']) ?> |
                         <?= h((string) $barisEdit['semester']) ?> <?= h((string) $barisEdit['tahun_ajaran']) ?>
@@ -247,6 +252,7 @@ require_once __DIR__ . '/includes/header.php';
             <tr>
                 <th scope="col">#</th>
                 <th scope="col">Mahasiswa</th>
+                <th scope="col">Prodi</th>
                 <th scope="col">Mata kuliah</th>
                 <th scope="col">Sem / TA</th>
                 <th scope="col">Angka</th>
@@ -256,12 +262,13 @@ require_once __DIR__ . '/includes/header.php';
             </thead>
             <tbody>
             <?php if ($daftar === []) : ?>
-                <tr><td colspan="7" class="text-center text-muted py-4">Belum ada data nilai.</td></tr>
+                <tr><td colspan="8" class="text-center text-muted py-4">Belum ada data nilai.</td></tr>
             <?php else : ?>
                 <?php foreach ($daftar as $i => $r) : ?>
                     <tr>
                         <td><?= $i + 1 ?></td>
                         <td><?= h((string) $r['nim']) ?> — <?= h((string) $r['nama_mhs']) ?></td>
+                        <td><?= h((string) $r['kode_prodi']) ?></td>
                         <td><?= h((string) $r['kode_mk']) ?> — <?= h((string) $r['nama_mk']) ?></td>
                         <td><?= h((string) $r['semester']) ?> <?= h((string) $r['tahun_ajaran']) ?></td>
                         <td><?= h((string) $r['nilai_angka']) ?></td>

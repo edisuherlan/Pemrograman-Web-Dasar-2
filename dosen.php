@@ -51,19 +51,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $nidn = trim((string) ($_POST['nidn'] ?? ''));
             $nama = trim((string) ($_POST['nama'] ?? ''));
             $email = trim((string) ($_POST['email'] ?? ''));
+            $idProdi = (int) ($_POST['id_prodi'] ?? 0);
 
             // Validasi sederhana: field wajib tidak boleh kosong
-            if ($nidn === '' || $nama === '') {
+            if ($nidn === '' || $nama === '' || $idProdi < 1) {
                 // Redirect dengan pesan; rawurlencode agar spasi/karakter aman di URL
-                header('Location: dosen.php?status=tidak_valid&msg=' . rawurlencode('NIDN dan nama wajib diisi.'));
+                header('Location: dosen.php?status=tidak_valid&msg=' . rawurlencode('NIDN, nama, dan program studi wajib diisi.'));
                 // exit wajib setelah header Location agar skrip berhenti
                 exit;
             }
 
             // ? = placeholder; nilai asli dikirim terpisah (aman dari SQL injection)
-            $stmt = $pdo->prepare('INSERT INTO dosen (nidn, nama, email) VALUES (?, ?, ?)');
+            $stmt = $pdo->prepare('INSERT INTO dosen (nidn, nama, email, id_prodi) VALUES (?, ?, ?, ?)');
             // Email kosong disimpan sebagai NULL di database (bukan string kosong)
-            $stmt->execute([$nidn, $nama, $email !== '' ? $email : null]);
+            $stmt->execute([$nidn, $nama, $email !== '' ? $email : null, $idProdi]);
             // Redirect sukses; user akan melihat alert hijau
             header('Location: dosen.php?status=simpan_ok');
             exit;
@@ -76,16 +77,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $nidn = trim((string) ($_POST['nidn'] ?? ''));
             $nama = trim((string) ($_POST['nama'] ?? ''));
             $email = trim((string) ($_POST['email'] ?? ''));
+            $idProdi = (int) ($_POST['id_prodi'] ?? 0);
 
             // id harus positif; NIDN dan nama tidak boleh kosong
-            if ($id < 1 || $nidn === '' || $nama === '') {
+            if ($id < 1 || $nidn === '' || $nama === '' || $idProdi < 1) {
                 header('Location: dosen.php?status=tidak_valid&msg=' . rawurlencode('Data tidak lengkap.'));
                 exit;
             }
 
-            $stmt = $pdo->prepare('UPDATE dosen SET nidn = ?, nama = ?, email = ? WHERE id_dosen = ?');
+            $stmt = $pdo->prepare('UPDATE dosen SET nidn = ?, nama = ?, email = ?, id_prodi = ? WHERE id_dosen = ?');
             // Urutan nilai harus sama dengan urutan ? pada query
-            $stmt->execute([$nidn, $nama, $email !== '' ? $email : null, $id]);
+            $stmt->execute([$nidn, $nama, $email !== '' ? $email : null, $idProdi, $id]);
             header('Location: dosen.php?status=simpan_ok');
             exit;
         }
@@ -134,8 +136,16 @@ if ($aksiGet === 'ubah' && $idEdit > 0) {
     }
 }
 
-// Ambil semua dosen untuk tabel; ORDER BY nama = urut abjad nama
-$daftarDosen = $pdo->query('SELECT * FROM dosen ORDER BY nama ASC')->fetchAll(PDO::FETCH_ASSOC);
+// Daftar prodi untuk dropdown form
+$prodiPilihan = $pdo->query('SELECT id_prodi, kode_prodi, nama_prodi FROM prodi ORDER BY kode_prodi ASC')->fetchAll(PDO::FETCH_ASSOC);
+
+// Ambil semua dosen beserta nama prodi (JOIN) untuk tabel
+$daftarDosen = $pdo->query(
+    'SELECT d.*, p.kode_prodi, p.nama_prodi
+     FROM dosen d
+     INNER JOIN prodi p ON p.id_prodi = d.id_prodi
+     ORDER BY d.nama ASC'
+)->fetchAll(PDO::FETCH_ASSOC);
 
 // Judul halaman untuk header
 $judulHalaman = 'Data Dosen';
@@ -150,7 +160,7 @@ if ($aksiGet === 'tambah' || ($aksiGet === 'ubah' && $barisEdit)) :
     ?>
     <!-- Form mengirim POST ke file ini sendiri -->
     <div class="alert alert-info small" role="note">
-        <strong>Petunjuk:</strong> Isi NIDN (unik), nama lengkap, dan email jika ada. Setelah klik simpan, Anda akan kembali ke daftar
+        <strong>Petunjuk:</strong> Isi NIDN (unik), nama lengkap, program studi, dan email jika ada. Setelah klik simpan, Anda akan kembali ke daftar
         dengan notifikasi sukses/gagal.
     </div>
     <div class="card shadow-sm border-0">
@@ -176,13 +186,23 @@ if ($aksiGet === 'tambah' || ($aksiGet === 'ubah' && $barisEdit)) :
                            value="<?= $barisEdit ? h((string) $barisEdit['nama']) : '' ?>">
                 </div>
                 <div class="col-12">
+                    <label class="form-label" for="id_prodi">Program studi</label>
+                    <select class="form-select" id="id_prodi" name="id_prodi" required <?= $prodiPilihan === [] ? 'disabled' : '' ?>>
+                        <option value="">— pilih prodi —</option>
+                        <?php foreach ($prodiPilihan as $p) : ?>
+                            <?php $sel = $barisEdit && (int) $barisEdit['id_prodi'] === (int) $p['id_prodi'] ? ' selected' : ''; ?>
+                            <option value="<?= (int) $p['id_prodi'] ?>"<?= $sel ?>><?= h((string) $p['kode_prodi']) ?> — <?= h((string) $p['nama_prodi']) ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <div class="col-12">
                     <label class="form-label" for="email">Email (opsional)</label>
                     <!-- type="email" memberi validasi format email ringan di browser -->
                     <input class="form-control" id="email" name="email" type="email" maxlength="120"
                            value="<?= $barisEdit ? h((string) ($barisEdit['email'] ?? '')) : '' ?>">
                 </div>
                 <div class="col-12 d-flex gap-2">
-                    <button type="submit" class="btn btn-primary">Simpan</button>
+                    <button type="submit" class="btn btn-primary" <?= $prodiPilihan === [] ? 'disabled' : '' ?>>Simpan</button>
                     <a class="btn btn-outline-secondary" href="dosen.php">Batal</a>
                 </div>
             </form>
@@ -192,7 +212,7 @@ if ($aksiGet === 'tambah' || ($aksiGet === 'ubah' && $barisEdit)) :
     <!-- MODE DAFTAR: tabel + tombol tambah -->
     <div class="alert alert-secondary small" role="note">
         <strong>Daftar dosen:</strong> gunakan <em>Tambah</em> untuk data baru. Tombol <em>Ubah</em> / <em>Hapus</em> ada di setiap baris.
-        Hapus bisa gagal jika dosen masih dipakai sebagai pengampu mata kuliah (aturan database).
+        Hapus bisa gagal jika dosen masih dipakai sebagai pengampu mata kuliah. Isi prodi dulu di menu <a href="prodi.php">Prodi</a> jika dropdown kosong.
     </div>
     <p><a class="btn btn-primary" href="dosen.php?aksi=tambah"><i class="bi bi-plus-lg"></i> Tambah dosen</a></p>
     <!-- table-responsive = scroll horizontal di layar sempit -->
@@ -203,6 +223,7 @@ if ($aksiGet === 'tambah' || ($aksiGet === 'ubah' && $barisEdit)) :
                 <th scope="col">#</th>
                 <th scope="col">NIDN</th>
                 <th scope="col">Nama</th>
+                <th scope="col">Prodi</th>
                 <th scope="col">Email</th>
                 <th scope="col" style="width: 9rem">Aksi</th>
             </tr>
@@ -210,7 +231,7 @@ if ($aksiGet === 'tambah' || ($aksiGet === 'ubah' && $barisEdit)) :
             <tbody>
             <?php if ($daftarDosen === []) : ?>
                 <!-- colspan 5 = satu sel melebar 5 kolom -->
-                <tr><td colspan="5" class="text-center text-muted py-4">Belum ada data dosen.</td></tr>
+                <tr><td colspan="6" class="text-center text-muted py-4">Belum ada data dosen.</td></tr>
             <?php else : ?>
                 <?php
                 // Loop: $i indeks 0,1,2...; $r satu array asosiatif per baris
@@ -221,6 +242,7 @@ if ($aksiGet === 'tambah' || ($aksiGet === 'ubah' && $barisEdit)) :
                         <td><?= $i + 1 ?></td>
                         <td><?= h((string) $r['nidn']) ?></td>
                         <td><?= h((string) $r['nama']) ?></td>
+                        <td><?= h((string) $r['kode_prodi']) ?> — <?= h((string) $r['nama_prodi']) ?></td>
                         <td><?= h((string) ($r['email'] ?? '')) ?></td>
                         <td class="d-flex flex-wrap gap-1">
                             <!-- Link GET ke mode ubah dengan id -->

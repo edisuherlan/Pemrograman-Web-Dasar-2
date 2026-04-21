@@ -25,7 +25,7 @@ declare(strict_types=1);
 $host = '127.0.0.1';
 
 // Nama database harus sama dengan yang Anda buat di phpMyAdmin / file SQL
-$namaDatabase = 'db_perkuliahan';
+$namaDatabase = 'perkuliahan';
 
 // Username MySQL — default Laragon: root
 $user = 'root';

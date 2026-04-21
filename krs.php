@@ -24,6 +24,22 @@ declare(strict_types=1);
 require_once __DIR__ . '/config/database.php';
 require_once __DIR__ . '/includes/fungsi.php';
 
+/**
+ * Pastikan mahasiswa dan mata kuliah satu program studi (atur bisnis KRS).
+ */
+function krs_prodi_cocok(PDO $pdo, int $idMahasiswa, int $idMk): bool
+{
+    $st = $pdo->prepare(
+        'SELECT m.id_prodi AS p_mhs, mk.id_prodi AS p_mk
+         FROM mahasiswa m, matakuliah mk
+         WHERE m.id_mahasiswa = ? AND mk.id_mk = ?'
+    );
+    $st->execute([$idMahasiswa, $idMk]);
+    $row = $st->fetch(PDO::FETCH_ASSOC);
+
+    return $row !== false && (int) $row['p_mhs'] === (int) $row['p_mk'];
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $aksi = $_POST['aksi'] ?? '';
 
@@ -37,6 +53,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // Pastikan semester persis 'gasal' atau 'genap' (sesuai ENUM di MySQL)
             if ($idMhs < 1 || $idMk < 1 || ($semester !== 'gasal' && $semester !== 'genap') || $thn === '') {
                 header('Location: krs.php?status=tidak_valid&msg=' . rawurlencode('Pilih mahasiswa & MK, semester, dan tahun ajaran.'));
+                exit;
+            }
+
+            if (!krs_prodi_cocok($pdo, $idMhs, $idMk)) {
+                header('Location: krs.php?status=tidak_valid&msg=' . rawurlencode('Mahasiswa dan mata kuliah harus dari program studi yang sama.'));
                 exit;
             }
 
@@ -57,6 +78,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             if ($id < 1 || $idMhs < 1 || $idMk < 1 || ($semester !== 'gasal' && $semester !== 'genap') || $thn === '') {
                 header('Location: krs.php?status=tidak_valid&msg=' . rawurlencode('Data tidak valid.'));
+                exit;
+            }
+
+            if (!krs_prodi_cocok($pdo, $idMhs, $idMk)) {
+                header('Location: krs.php?status=tidak_valid&msg=' . rawurlencode('Mahasiswa dan mata kuliah harus dari program studi yang sama.'));
                 exit;
             }
 
@@ -110,10 +136,11 @@ $mkList = $pdo->query('SELECT id_mk, kode_mk, nama_mk FROM matakuliah ORDER BY k
 
 // Daftar KRS dengan JOIN supaya tampilan ramah (bukan cuma angka ID)
 $daftar = $pdo->query(
-    'SELECT k.*, m.nim, m.nama AS nama_mhs, mk.kode_mk, mk.nama_mk
+    'SELECT k.*, m.nim, m.nama AS nama_mhs, mk.kode_mk, mk.nama_mk, p.kode_prodi
      FROM krs k
      INNER JOIN mahasiswa m ON m.id_mahasiswa = k.id_mahasiswa
      INNER JOIN matakuliah mk ON mk.id_mk = k.id_mk
+     INNER JOIN prodi p ON p.id_prodi = m.id_prodi
      ORDER BY k.tahun_ajaran DESC, k.semester, m.nim'
 )->fetchAll(PDO::FETCH_ASSOC);
 
@@ -124,7 +151,7 @@ require_once __DIR__ . '/includes/header.php';
 <?php if ($aksiGet === 'tambah' || ($aksiGet === 'ubah' && $barisEdit)) : ?>
     <div class="alert alert-info small" role="note">
         <strong>Petunjuk:</strong> Satu mahasiswa tidak boleh mengambil kombinasi MK + semester + tahun ajaran yang sama dua kali.
-        Format tahun ajaran disarankan: <code>2025/2026</code> (bukan spasi).
+        Format tahun ajaran disarankan: <code>2025/2026</code>. Mahasiswa hanya boleh mengambil MK dari <strong>prodi yang sama</strong>.
     </div>
     <?php if ($mahasiswaList === [] || $mkList === []) : ?>
         <div class="alert alert-warning">Lengkapi dulu data <a href="mahasiswa.php">Mahasiswa</a> dan <a href="matakuliah.php">Mata kuliah</a>.</div>
@@ -195,6 +222,7 @@ require_once __DIR__ . '/includes/header.php';
             <tr>
                 <th scope="col">#</th>
                 <th scope="col">Mahasiswa</th>
+                <th scope="col">Prodi</th>
                 <th scope="col">Mata kuliah</th>
                 <th scope="col">Semester</th>
                 <th scope="col">Tahun ajaran</th>
@@ -203,12 +231,13 @@ require_once __DIR__ . '/includes/header.php';
             </thead>
             <tbody>
             <?php if ($daftar === []) : ?>
-                <tr><td colspan="6" class="text-center text-muted py-4">Belum ada data KRS.</td></tr>
+                <tr><td colspan="7" class="text-center text-muted py-4">Belum ada data KRS.</td></tr>
             <?php else : ?>
                 <?php foreach ($daftar as $i => $r) : ?>
                     <tr>
                         <td><?= $i + 1 ?></td>
                         <td><?= h((string) $r['nim']) ?> — <?= h((string) $r['nama_mhs']) ?></td>
+                        <td><?= h((string) $r['kode_prodi']) ?></td>
                         <td><?= h((string) $r['kode_mk']) ?> — <?= h((string) $r['nama_mk']) ?></td>
                         <td><?= h((string) $r['semester']) ?></td>
                         <td><?= h((string) $r['tahun_ajaran']) ?></td>
