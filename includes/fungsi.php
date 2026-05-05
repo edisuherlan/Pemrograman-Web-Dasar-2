@@ -41,6 +41,11 @@ function tampilkan_alert_dari_url(): void
         'gagal'       => ['danger', $pesan !== '' ? $pesan : 'Terjadi kesalahan.'],
         'duplikat'    => ['warning', $pesan !== '' ? $pesan : 'Data bentrok dengan aturan database (misalnya NIM/NIDN sudah ada).'],
         'tidak_valid' => ['warning', $pesan !== '' ? $pesan : 'Input tidak valid.'],
+        // Studi kasus login (sesi & autentikasi)
+        'login_ok'    => ['success', 'Login berhasil.'],
+        'login_gagal' => ['danger', 'Username atau kata sandi tidak cocok.'],
+        'login_perlu' => ['warning', 'Silakan login terlebih dahulu untuk mengakses halaman tersebut.'],
+        'logout_ok'   => ['success', 'Anda sudah logout.'],
     ];
 
     // Kalau status tidak dikenal, tidak menampilkan apa-apa

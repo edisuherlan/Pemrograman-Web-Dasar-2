@@ -1,5 +1,5 @@
 -- Database: perkuliahan
--- Praktikum Pemrograman Web 2 — skema akademik (6 tabel: prodi + 5 tabel lain berelasi)
+-- Praktikum Pemrograman Web 2 — skema akademik (7 tabel: prodi + 5 tabel akademik + pengguna untuk studi kasus login)
 -- Impor via phpMyAdmin / mysql CLI: mysql -u root < database/perkuliahan.sql
 
 SET NAMES utf8mb4;
@@ -110,6 +110,18 @@ CREATE TABLE nilai (
     ON UPDATE CASCADE ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
+-- 6. Pengguna — studi kasus login (tidak berelasi ke tabel akademik; sandi disimpan ter-hash)
+CREATE TABLE pengguna (
+  id_pengguna INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  username VARCHAR(50) NOT NULL,
+  password_hash VARCHAR(255) NOT NULL,
+  nama_tampilan VARCHAR(120) NOT NULL,
+  peran ENUM('admin', 'operator') NOT NULL DEFAULT 'operator',
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id_pengguna),
+  UNIQUE KEY uq_pengguna_username (username)
+) ENGINE=InnoDB;
+
 SET FOREIGN_KEY_CHECKS = 1;
 
 -- Seeder
@@ -185,6 +197,11 @@ INSERT INTO krs (id_mahasiswa, id_mk, semester, tahun_ajaran) VALUES
   (23, 1, 'gasal', '2025/2026'),
   (24, 1, 'gasal', '2025/2026'),
   (25, 1, 'gasal', '2025/2026');
+
+-- Akun demo: admin123 dan operator123 (bcrypt via password_hash PHP)
+INSERT INTO pengguna (username, password_hash, nama_tampilan, peran) VALUES
+  ('admin', '$2y$10$HUvx.PsXzlXxwBAntK8HzeaIKQMnjn4xJ5QkG8nRl9yWovWnmHza6', 'Administrator', 'admin'),
+  ('operator', '$2y$10$9muX38gQQtMdgkNW8RLcqOtZpfABczMmbYVDjZu/ncw/ylUiV3dv2', 'Operator Demo', 'operator');
 
 INSERT INTO nilai (id_krs, nilai_angka, nilai_huruf) VALUES
   (1, 88.00, 'A'),

@@ -86,6 +86,7 @@ require_once __DIR__ . '/includes/header.php';
         ['matakuliah.php', 'bi-book', 'Mata kuliah', 'Kode MK, SKS, dan dosen pengampu.'],
         ['krs.php', 'bi-journal-text', 'KRS', 'Mahasiswa mengambil mata kuliah per semester & tahun ajaran.'],
         ['nilai.php', 'bi-clipboard-data', 'Nilai', 'Nilai angka & huruf untuk setiap baris KRS.'],
+        ['login.php', 'bi-shield-lock', 'Studi kasus: Login', 'Sesi PHP, password_hash/verify, halaman terlindungi (panel aman).'],
     ];
     // foreach: ulangi untuk setiap kartu; destructuring ke $url, $ikon, $judul, $isi
     foreach ($kartu as [$url, $ikon, $judul, $isi]) {

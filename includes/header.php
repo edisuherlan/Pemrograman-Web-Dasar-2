@@ -17,6 +17,10 @@ declare(strict_types=1);
 
 // Muat fungsi h() dan alert — harus sebelum pemakaian h() di bawah
 require_once __DIR__ . '/fungsi.php';
+// Studi kasus login: sesi untuk menampilkan menu Login / Panel / Keluar
+require_once __DIR__ . '/auth.php';
+pastikan_sesi();
+$penggunaNav = ambil_pengguna_dari_sesi();
 
 // Jika halaman lupa set judul, pakai judul default supaya tidak kosong
 if (!isset($judulHalaman)) {
@@ -25,6 +29,8 @@ if (!isset($judulHalaman)) {
 
 // Nama file skrip saat ini (misalnya dosen.php) dipakai untuk menandai menu aktif
 $basename = basename((string) ($_SERVER['SCRIPT_NAME'] ?? ''));
+// Tanpa sesi valid, semua halaman (kecuali login) dialihkan ke form login
+pastikan_login_atau_redirect($basename);
 ?>
 <!-- Deklarasi HTML5; lang=id untuk aksesibilitas & mesin pencari -->
 <!DOCTYPE html>
@@ -68,6 +74,13 @@ $basename = basename((string) ($_SERVER['SCRIPT_NAME'] ?? ''));
                 <li class="nav-item"><a class="nav-link <?= $basename === 'matakuliah.php' ? 'active' : '' ?>" href="matakuliah.php">Mata kuliah</a></li>
                 <li class="nav-item"><a class="nav-link <?= $basename === 'krs.php' ? 'active' : '' ?>" href="krs.php">KRS</a></li>
                 <li class="nav-item"><a class="nav-link <?= $basename === 'nilai.php' ? 'active' : '' ?>" href="nilai.php">Nilai</a></li>
+                <?php if ($penggunaNav === null) { ?>
+                    <li class="nav-item"><a class="nav-link <?= $basename === 'login.php' ? 'active' : '' ?>" href="login.php">Login</a></li>
+                <?php } else { ?>
+                    <li class="nav-item"><a class="nav-link <?= $basename === 'panel_aman.php' ? 'active' : '' ?>" href="panel_aman.php">Panel aman</a></li>
+                    <li class="nav-item"><span class="nav-link py-2 small text-white-50"><?= h($penggunaNav['nama_tampilan']) ?></span></li>
+                    <li class="nav-item"><a class="nav-link" href="logout.php">Keluar</a></li>
+                <?php } ?>
             </ul>
         </div>
     </div>
